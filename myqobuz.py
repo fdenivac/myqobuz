@@ -64,6 +64,15 @@ def timestamp_tostring(timestamp, fmt='%d/%m/%Y'):
         return datetime.fromtimestamp(timestamp).strftime(fmt)
 
 
+def str_max(string, maxchar):
+    '''
+    Returns string limited to max characters
+    '''
+    if len(string) <= maxchar:
+        return string
+    return string[:maxchar - 3] + '...'
+
+
 def print_header(fmt, elements):
     '''
     print header for table
@@ -73,7 +82,6 @@ def print_header(fmt, elements):
     print(len(header) * '=')
     print(header)
     print(len(header) * '=')
-
 
 
 def smart_bio(bio, size):
@@ -108,9 +116,9 @@ def download_album_image(album):
     '''
     download album image
     '''
-    filename = '{} - {}.{}.jpg'.format(album.artist.name, album.title, album.id)
+    filename = f'{album.artist.name} - {album.title}.{album.id}.jpg'
     filename = filename.replace(':', '-').replace('/', '-')
-    filename = '{}\\{}'.format(MYCONFIG['album']['cover_dir'], filename)
+    filename = f"{MYCONFIG['album']['cover_dir']}\\{filename}"
     if os.path.exists(filename):
         return
     resp = requests.get(album.images[MYCONFIG['album']['cover_size']], allow_redirects=True)
@@ -242,18 +250,22 @@ def qobuz_myplaylists(user, args, log):
         tracks = get_all_tracks(playlist)
 
         log.info('display playlist tracks...')
-        fmt = '    %8s | %-40s | %-50s | %-50s | %10s | %s'
+        fmt = '    %9s | %-40s | %-50s | %-50s | %10s | %s'
         print_header(fmt, ('#idTrack', 'Artist', 'Album', 'Title', 'Track', 'Duration'))
         if args.sort:
             tracks.sort(key=lambda x: x.artist.name + x.album.title)
         for track in tracks:
-            print(fmt % (track.id, track.artist.name, track.album.title, track.title, '%s/%s' % (track.track_number, track.album.tracks_count), seconds_tostring(track.duration)))
+            print(fmt % (track.id,
+                         str_max(track.artist.name, 40),
+                         str_max(track.album.title, 50),
+                         str_max(track.title, 50),
+                        f'{track.track_number}/{track.album.tracks_count}',
+                        seconds_tostring(track.duration)))
             if args.performers:
                 for performer in track.performers:
-                    print('        -> {}'.format(performer))
+                    print(f'        -> {performer}')
         log.info('... done')
         print()
-
 
 
 def qobuz_myfavorites(user, args, log):
@@ -262,7 +274,7 @@ def qobuz_myfavorites(user, args, log):
     '''
     if args.type in ['tracks', 'all']:
         print('Favorites Tracks')
-        fmt = '    %8s | %-40s | %-50s | %-50s | %10s | %10s'
+        fmt = '    %9s | %-40s | %-50s | %-50s | %10s | %10s'
         print_header(fmt, ('#idTrack', 'Artist', 'Album', 'Title', 'Track', 'Duration'))
         log.info('get all favorites...')
         tracks = get_user_favorites(user, 'tracks', args.raw)
@@ -270,13 +282,19 @@ def qobuz_myfavorites(user, args, log):
         if args.raw:
             print(json.dumps(tracks, indent=4))
         else:
-            tracks.sort(key=lambda x: x.artist.name + x.album.title)
+            if args.sort:
+                tracks.sort(key=lambda x: x.artist.name + x.album.title)
             for track in tracks:
                 log.info('display track')
-                print(fmt % (track.id, track.artist.name, track.album.title, track.title, '%s/%s' % (track.track_number, track.album.tracks_count), seconds_tostring(track.duration)))
+                print(fmt % (track.id,
+                             str_max(track.artist.name, 40),
+                             str_max(track.album.title, 50),
+                             str_max(track.title, 50),
+                             f'{track.track_number}/{track.album.tracks_count}',
+                             seconds_tostring(track.duration)))
                 if args.performers:
                     for performer in track.performers:
-                        print('        -> {}'.format(performer))
+                        print(f'        -> {performer}')
                 if args.cover:
                     download_album_image(track.album)
             log.info('display done')
@@ -295,7 +313,11 @@ def qobuz_myfavorites(user, args, log):
             albums.sort(key=lambda x: x.artist.name)
             for album in albums:
                 log.info('display album')
-                print(fmt % (album.id, album.artist.name, album.title, '%s tracks' % album.tracks_count, timestamp_tostring(album.released_at)))
+                print(fmt % (album.id,
+                             str_max(album.artist.name, 40),
+                             str_max(album.title, 50),
+                             f'{album.tracks_count} tracks',
+                             timestamp_tostring(album.released_at)))
                 if args.cover:
                     download_album_image(album)
             log.info('display done')
@@ -358,7 +380,7 @@ def qobuz_mod_playlist(user, action, args, log):
         try:
             fsource = open(args.track_file, encoding='utf8')
         except FileNotFoundError:
-            print('FAILED: file "{}" not found'.format(args.track_file))
+            print(f'FAILED: file "{args.track_file}" not found')
             return
     else:
         fsource = sys.stdin
@@ -383,10 +405,10 @@ def qobuz_mod_playlist(user, action, args, log):
                 if args.replace:
                     local_action = 'replace'
                     log.info('force "replace" action')
-                print('Add track(s) to existing playlist "{}"'.format(name))
+                print(f'Add track(s) to existing playlist "{name}"')
                 id_playlist = current_playlists[name.lower()]
             elif local_action == 'del':
-                print('Delete track(s) to existing playlist "{}"'.format(name))
+                print(f'Delete track(s) to existing playlist "{name}"')
                 id_playlist = current_playlists[name.lower()]
         else:
             # create new playlist
@@ -407,7 +429,7 @@ def qobuz_mod_playlist(user, action, args, log):
             for track in new_playlist['tracks']:
                 if not track in current_tracks:
                     tracks_to_add.append(track)
-            print('  number of tracks to add : {}'.format(len(tracks_to_add)))
+            print(f'  number of tracks to add : {len(tracks_to_add)}')
             if tracks_to_add:
                 log.info('add tracks %s ...', tracks_to_add)
                 playlist_work.add_tracks(tracks_to_add, user)
@@ -419,7 +441,7 @@ def qobuz_mod_playlist(user, action, args, log):
                 if track in current_tracks:
                     # add the playlist_track_id
                     tracks_to_del.append(current_tracks[track])
-            print('  number of tracks to delete : {}'.format(len(tracks_to_del)))
+            print(f'  number of tracks to delete : {len(tracks_to_del)}')
             if tracks_to_del:
                 log.info('delete tracks %s ...', tracks_to_del)
                 playlist_work.del_tracks(tracks_to_del, user)
@@ -438,7 +460,7 @@ def qobuz_mod_playlist(user, action, args, log):
                     playlist_tracks_to_del.append(current_tracks[track])
                     tracks_to_del.append(track)
             # do add and delete
-            print('  {} tracks to add, {} to delete'.format(len(tracks_to_add), (len(playlist_tracks_to_del))))
+            print(f'  {len(tracks_to_add)} tracks to add, {len(playlist_tracks_to_del)} to delete')
             if tracks_to_add:
                 log.info('add tracks %s ...', tracks_to_add)
                 playlist_work.add_tracks(tracks_to_add, user)
@@ -460,7 +482,7 @@ def qobuz_mod_favorites(user, action, args, log):
             fsource = open(args.fav_file[0], encoding='utf8')
             log.info('Favorites %s from "%s"', action, args.fav_file[0])
         except FileNotFoundError:
-            print('FAILED: file "{}" not found'.format(args.fav_file[0]))
+            print(f'FAILED: file "{args.fav_file[0]}" not found')
             return
     else:
         fsource = sys.stdin
@@ -477,7 +499,7 @@ def qobuz_mod_favorites(user, action, args, log):
         match = re_section.match(line)
         if match:
             if not match.group(1) in ['Artists', 'Albums', 'Tracks']:
-                print('ERROR : favorites section unkwown : "{}"'.format(match.group(1)))
+                print(f'ERROR : favorites section unkwown : "{match.group(1)}"')
                 return
             section = match.group(1)
             continue
@@ -494,8 +516,7 @@ def qobuz_mod_favorites(user, action, args, log):
     elif action == 'del':
         result = user.favorites_del(albums=favorites['Albums'], tracks=favorites['Tracks'], artists=favorites['Artists'])
     if result:
-        print('  Favorites processed : Artists:{}, Albums:{}, Tracks:{}'.format(\
-            len(favorites['Artists']), len(favorites['Albums']), len(favorites['Tracks'])))
+        print(f"  Favorites processed : Artists:{len(favorites['Artists'])}, Albums:{len(favorites['Albums'])}, Tracks:{len(favorites['Tracks'])}")
     else:
         print('FAILED')
 
@@ -568,6 +589,7 @@ def main():
         help=': retrieves and displays user favorites')
     subparser.add_argument('--type', help='Type of favorites to retrieve', \
                     choices=['tracks', 'albums', 'artists', 'all',], default='all')
+    subparser.add_argument('--sort', action='store_true', help='Sort tracks on "artist" and "album"')
     subparser.add_argument('--cover', action='store_true', help='Download album cover image. Destination and size is specified in "config.json"')
     subparser.add_argument('--performers', action='store_true', help='Displays performers for tracks')
     subparser.add_argument('--raw', action='store_true', help='Print json structure')
