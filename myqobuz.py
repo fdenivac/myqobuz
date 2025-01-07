@@ -25,10 +25,19 @@ import requests
 
 # read config file for login and preferences
 try:
-    with open('config.json') as fconf:
+    with open('config.json', encoding='utf8') as fconf:
         MYCONFIG = json.load(fconf)
 except FileNotFoundError:
     sys.exit('FAILED to load config file')
+try:
+    if MYCONFIG['login']['app_id'] == "<MY_APP_ID>" or \
+        MYCONFIG['login']['app_secret'] == "<MY_APP_SECRET>" or \
+        MYCONFIG['login']['email'] == "<MY_EMAIL>" or \
+        MYCONFIG['login']['password'] == "<MY_PASSWORD>" or \
+        MYCONFIG['qobuz_module'] == "<PYTHON_QOBUZ_MODULE_PATH>":
+        sys.exit("FAILED : config.json file not set")
+except KeyError as _e:
+    sys.exit("FAILED : missing entries in config.json")
 
 # the qobuz module can be located in a specific path
 try:
@@ -48,9 +57,9 @@ def seconds_tostring(seconds):
     '''
     stime = []
     if seconds // 3600 > 0:
-        stime.append('{}:'.format(seconds // 3600))
-    stime.append('{:02d}:'.format((seconds // 60) % 60))
-    stime.append('{:02d}'.format(seconds % 60))
+        stime.append(f'{seconds // 3600}:')
+    stime.append(f'{(seconds // 60) % 60:02d}:')
+    stime.append(f'{seconds % 60:02d}')
     return ''.join(stime)
 
 
@@ -165,9 +174,9 @@ def get_user_favorites(user, fav_type, raw=False):
         favorites type: 'tracks', 'albums', 'artists'
     limi
     '''
-    limit = 50
+    limit = 500
     offset = 0
-    favorites = list()
+    favorites = []
     while True:
         favs = user.favorites_get(fav_type=fav_type, limit=limit, offset=offset, raw=raw)
         if raw:
@@ -192,9 +201,9 @@ def get_all_tracks(playlist, raw=False):
     ----------
     user: qobuz.User object
     '''
-    limit = 50
+    limit = 500
     offset = 0
-    tracks = list()
+    tracks = []
     while True:
         trks = playlist.get_tracks(limit=limit, offset=offset, raw=raw)
         if raw:
@@ -239,9 +248,9 @@ def qobuz_myplaylists(user, args, log):
             log.info('skip playlist "%s"', playlist.name)
             continue
 
-        print('Playlist: "{}", description: "{}", public: {}, collaborative: {}, duration: {}, {} tracks, update date: {}, id: {}'.\
-            format(playlist.name, playlist.description, playlist.public, playlist.collaborative, \
-                seconds_tostring(playlist.duration), playlist.tracks_count, datetime.fromtimestamp(playlist.updated_at).strftime('%Y-%m-%d'), playlist.id))
+        print(f'Playlist: "{playlist.name}", description: "{playlist.description}", public: {playlist.public}, collaborative: {playlist.collaborative}, ' \
+                f'duration: {seconds_tostring(playlist.duration)}, {playlist.tracks_count} tracks, ' \
+                f'update date: {datetime.fromtimestamp(playlist.updated_at).strftime("%Y-%m-%d")}, id: {playlist.id}')
 
         if args.no_tracks:
             continue
@@ -253,10 +262,10 @@ def qobuz_myplaylists(user, args, log):
         fmt = '    %9s | %-40s | %-50s | %-50s | %10s | %s'
         print_header(fmt, ('#idTrack', 'Artist', 'Album', 'Title', 'Track', 'Duration'))
         if args.sort:
-            tracks.sort(key=lambda x: x.artist.name + x.album.title)
+            tracks.sort(key=lambda x: x.artist_name + x.album.title)
         for track in tracks:
             print(fmt % (track.id,
-                         str_max(track.artist.name, 40),
+                         str_max(track.artist_name, 40),
                          str_max(track.album.title, 50),
                          str_max(track.title, 50),
                         f'{track.track_number}/{track.album.tracks_count}',
@@ -278,16 +287,19 @@ def qobuz_myfavorites(user, args, log):
         print_header(fmt, ('#idTrack', 'Artist', 'Album', 'Title', 'Track', 'Duration'))
         log.info('get all favorites...')
         tracks = get_user_favorites(user, 'tracks', args.raw)
+        # for track in tracks:
+        #     if track.performer_name != track.artist.name:
+        #         print(f'WARNING : "{track.performer_name}" != "{track.artist.name}"')
         log.info('... done')
         if args.raw:
             print(json.dumps(tracks, indent=4))
         else:
             if args.sort:
-                tracks.sort(key=lambda x: x.artist.name + x.album.title)
+                tracks.sort(key=lambda x: x.artist_name + x.album.title)
             for track in tracks:
                 log.info('display track')
                 print(fmt % (track.id,
-                             str_max(track.artist.name, 40),
+                             str_max(track.artist_name, 40),
                              str_max(track.album.title, 50),
                              str_max(track.title, 50),
                              f'{track.track_number}/{track.album.tracks_count}',
@@ -359,7 +371,7 @@ def _read_playlists_file(file_source):
                 'description': match.group(2),
                 'public': match.group(3) == 'True',
                 'collaborative' :match.group(4) == 'True',
-                'tracks': list()
+                'tracks': []
             }
             continue
         match = re_idtrk.match(line)
@@ -407,7 +419,8 @@ def qobuz_mod_playlist(user, action, args, log):
                     log.info('force "replace" action')
                 print(f'Add track(s) to existing playlist "{name}"')
                 id_playlist = current_playlists[name.lower()]
-            elif local_action == 'del':
+            # elif local_action == 'del':
+            else:
                 print(f'Delete track(s) to existing playlist "{name}"')
                 id_playlist = current_playlists[name.lower()]
         else:
@@ -632,6 +645,10 @@ def main():
 
     # parse arguments
     args = parser.parse_args()
+    if args.command is None:
+        print("FAILED: Missing command !")
+        parser.print_help()
+        sys.exit(-1)
 
     # logging
     if args.log:
