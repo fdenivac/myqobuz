@@ -1,13 +1,13 @@
 {
     "login":{
         "app_id": "<MY_APP_ID>",
-        "app_secret": "<MY_APP_SECRET>",
-        "email": "<MY_EMAIL>",
-        "password": "<MY_PASSWORD>"
+        "user_id": "<MY_USER_ID>",
+        "secrets" : "<MY_SECRETS",
+        "auth_token": "<MY_TOKEN>"
     },
     "album":{
         "cover_size": "large",
         "cover_dir": "<MYIMAGES_PATH>"
     },
-	"qobuz_module": "<PYTHON_QOBUZ_MODULE_PATH>"
+    "qobuz_module": ""
 }

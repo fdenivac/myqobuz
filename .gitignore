@@ -1,6 +1,8 @@
 # my filters
 *.txt
 *.sh
+.vscode
+*.code-workspace
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

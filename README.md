@@ -2,28 +2,23 @@
 
 Get or Set Qobuz playlists and favorites from command line
 
-Use a forked version of [python-qobuz](https://github.com/fdenivac/python-qobuz) module.
-
-The myqobuz script and ""python-qobuz"" library needs a valid APP_ID and APP_SECRET. Both id and secret can be requested from [api@qobuz.com](mailto:api@qobuz.com).
-You can also have a look on [Spoofbuz](https://github.com/DashLt/Spoofbuz).<br>
+Use last version (>= 1.1) of [python-qobuz](https://github.com/fdenivac/python-qobuz) module supporting OAuth authentication.
+<br>
 
 
 # Installation
-- Download [python-qobuz](https://github.com/fdenivac/python-qobuz), 
-- Install the "*qobuz*" directory in python *site-packages*, or anywhere and in this case you have to fill "qobuz_module" field of myqobuz "*config.json*"
+- Download / install [python-qobuz](https://github.com/fdenivac/python-qobuz), 
+    ```
+    pip install git+https://github.com/fdenivac/python-qobuz
+    ```
 - Download myqobuz script and install it anywhere
-- Prepare config file ''config.json'' :
-```
-    {
-        "login":{
-            "app_id": "YOUR_APP_ID",
-            "app_secret": "YOUR_APP_SECRET",
-            "email": "YOUR_EMAIL",
-            "password": "YOUR_PASSWORD"
-        },
-        "qobuz_module": "D:\\Devs\\python-qobuz\\src"
-    }
-```
+- Your application needs to be authenticated via OAuth :<br>
+  on first use, or when authentication expires, execute :
+    ```
+    python myqobuz.py authenticate
+    ```
+    and follow instructions. The "**login**" section of config file ("_config.json_") will be now filled.
+
 
 # Usage
 
